@@ -171,7 +171,7 @@ private fun TaskCard(task: TodoEntry, onToggleComplete: () -> Unit) {
             Checkbox(checked = task.isCompleted, onCheckedChange = { onToggleComplete() }, colors = CheckboxDefaults.colors(checkedColor = Accent, checkmarkColor = Color.White))
             Column(Modifier.weight(1f)) {
                 Text(task.title, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                task.project.takeIf { it.isNotBlank() }?.let { Text(it, color = TextDim, fontSize = 11.sp) }
+                task.tags.takeIf { it.isNotBlank() }?.let { Text(it, color = TextDim, fontSize = 11.sp) }
             }
             // Placeholder for priority badge, pin icon etc.
         }
