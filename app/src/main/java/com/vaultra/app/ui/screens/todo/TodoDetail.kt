@@ -3,6 +3,7 @@ package com.vaultra.app.ui.screens.todo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -151,7 +152,7 @@ fun TodoDetailScreen(
                 item {
                     val tagList = task.tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        androidx.compose.foundation.lazy.items(tagList) { tag ->
+                        items(tagList) { tag ->
                             Box(Modifier.clip(RoundedCornerShape(20.dp)).background(BgCard).padding(horizontal = 10.dp, vertical = 5.dp)) {
                                 Text("#$tag", fontSize = 11.sp, color = Accent2)
                             }
