@@ -4,7 +4,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -52,6 +59,53 @@ fun DocumentsScreen(db: VaultDatabase) {
     val categories by db.documentCategoryDao().getAll().collectAsState(initial = emptyList())
     val folders by db.documentFolderDao().getAll().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var showUploadSheet by remember { mutableStateOf(false) }
+    var showQuickUploadMenu by remember { mutableStateOf(false) }
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
+
+    fun newDraftWith(docType: String, attachments: List<String>): DocumentEntry {
+        val now = System.currentTimeMillis()
+        return DocumentEntry(
+            id = java.util.UUID.randomUUID().toString(), title = "", categoryId = null,
+            folderId = currentFolderId, docType = docType, holderName = "", docNumber = "",
+            notes = "", updatedAt = now, createdAt = now, attachmentPaths = attachments
+        )
+    }
+    fun openEditorWithAttachments(docType: String, paths: List<String>) {
+        if (paths.isEmpty()) return
+        editTarget = newDraftWith(docType, paths)
+        showEditor = true
+    }
+
+    val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) scope.launch { openEditorWithAttachments("PDF", com.vaultra.app.util.ImageStore.importFiles(context, uris, "documents")) }
+    }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        if (uris.isNotEmpty()) scope.launch { openEditorWithAttachments("Image", com.vaultra.app.util.ImageStore.importFiles(context, uris, "documents")) }
+    }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        if (uris.isNotEmpty()) scope.launch { openEditorWithAttachments("Video", com.vaultra.app.util.ImageStore.importFiles(context, uris, "documents")) }
+    }
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) scope.launch { openEditorWithAttachments("Audio", com.vaultra.app.util.ImageStore.importFiles(context, uris, "documents")) }
+    }
+    val anyFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) scope.launch { openEditorWithAttachments("File", com.vaultra.app.util.ImageStore.importFiles(context, uris, "documents")) }
+    }
+    val scanCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val file = pendingCameraFile
+        if (success && file != null) openEditorWithAttachments("Scanned Document", listOf(file.absolutePath))
+        pendingCameraFile = null
+    }
+    fun launchScan() {
+        val dir = File(context.filesDir, "attachments/documents").apply { if (!exists()) mkdirs() }
+        val file = File(dir, "${java.util.UUID.randomUUID()}.jpg")
+        pendingCameraFile = file
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        scanCameraLauncher.launch(uri)
+    }
 
     var currentFolderId by remember { mutableStateOf<String?>(null) }
     var search by remember { mutableStateOf("") }
@@ -237,10 +291,37 @@ fun DocumentsScreen(db: VaultDatabase) {
             }
 
             if (visibleDocs.isEmpty()) {
-                Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = TextDim, modifier = Modifier.size(40.dp))
-                    Spacer(Modifier.height(10.dp))
-                    Text(if (docs.isEmpty()) "No documents yet — tap + to add one." else "Nothing matches here.", color = TextDim, fontSize = 13.sp)
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 48.dp).padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.size(84.dp).clip(RoundedCornerShape(24.dp)).background(BgCard),
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Filled.FolderOpen, contentDescription = null, tint = Accent2, modifier = Modifier.size(38.dp)) }
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        if (docs.isEmpty()) "No Documents Found" else "Nothing matches here",
+                        color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (docs.isEmpty()) "Keep your IDs, certificates, and files safe and encrypted in one place."
+                        else "Try a different search, filter, or category.",
+                        color = TextDim, fontSize = 12.5.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (docs.isEmpty()) {
+                        Spacer(Modifier.height(18.dp))
+                        Button(
+                            onClick = { showUploadSheet = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Upload File", fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             } else if (viewMode == DocViewMode.LIST) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
@@ -270,11 +351,44 @@ fun DocumentsScreen(db: VaultDatabase) {
             }
         }
 
-        FloatingActionButton(
-            onClick = { editTarget = null; showEditor = true },
-            containerColor = Accent, contentColor = Color.White, shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
-        ) { Icon(Icons.Filled.Add, contentDescription = "Add document") }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp)
+                .size(56.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Accent)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { showUploadSheet = true },
+                        onLongPress = { showQuickUploadMenu = true }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Filled.Add, contentDescription = "Add document", tint = Color.White) }
+    }
+
+    if (showUploadSheet) {
+        DocumentUploadSheet(
+            onDismiss = { showUploadSheet = false },
+            onPickPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
+            onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onPickVideo = { videoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) },
+            onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
+            onPickAnyFile = { anyFilePicker.launch(arrayOf("*/*")) },
+            onScan = { launchScan() },
+            onCreateFolder = { showFolderManager = true },
+            onCreateNote = { editTarget = newDraftWith("Secure Note", emptyList()); showEditor = true }
+        )
+    }
+    if (showQuickUploadMenu) {
+        DocumentQuickUploadMenu(
+            onDismiss = { showQuickUploadMenu = false },
+            onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onPickPdf = { pdfPicker.launch(arrayOf("application/pdf")) },
+            onPickAnyFile = { anyFilePicker.launch(arrayOf("*/*")) },
+            onScan = { launchScan() }
+        )
     }
 
     if (showFilterSheet) {
@@ -339,7 +453,7 @@ private fun DocumentsDashboard(docs: List<DocumentEntry>, categories: List<Docum
             Text("Document Vault", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardStatDoc("Total", docs.size.toString(), TextPrimary)
+                DashboardStatDoc("Total Files", docs.size.toString(), TextPrimary)
                 DashboardStatDoc("Categories", categories.size.toString(), Accent2)
                 DashboardStatDoc("Favorites", favoriteCount.toString(), Warn)
                 DashboardStatDoc("Folders", folders.size.toString(), Good)

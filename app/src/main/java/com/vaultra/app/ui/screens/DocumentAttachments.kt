@@ -46,8 +46,12 @@ import java.io.File
 import java.util.UUID
 
 private val DOC_ATTACHMENT_MIME_TYPES = arrayOf(
-    "image/*", "application/pdf", "text/plain",
-    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    "image/*", "video/*", "audio/*", "application/pdf", "text/plain",
+    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip", "application/x-rar-compressed", "application/x-7z-compressed",
+    "application/vnd.android.package-archive", "*/*"
 )
 
 /** Unlimited-attachment picker for the Documents module: camera capture, gallery, or file manager. */
