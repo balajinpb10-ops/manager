@@ -391,7 +391,7 @@ fun TaskCard(
                     }
                 }
                 IconButton(onClick = onTogglePin, modifier = Modifier.size(32.dp)) {
-                    Icon(if (task.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin, contentDescription = "Pin", tint = if (task.isPinned) Accent2 else TextDim, modifier = Modifier.size(18.dp))
+                    Icon(if (task.isPinned) Icons.Filled.PushPin else Icons.Filled.PushPin, contentDescription = "Pin", tint = if (task.isPinned) Accent2 else TextDim, modifier = Modifier.size(18.dp))
                 }
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                     Icon(if (task.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, contentDescription = "Favorite", tint = if (task.isFavorite) Accent2 else TextDim, modifier = Modifier.size(18.dp))
