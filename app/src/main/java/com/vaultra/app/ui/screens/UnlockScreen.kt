@@ -31,10 +31,10 @@ import com.vaultra.app.util.BiometricHelper
 import kotlinx.coroutines.launch
 
 @Composable
-fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnlocked: (ByteArray) -> Unit) {
+fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnlocked: (ByteArray) -> Unit, initialError: String? = null) {
     var pw by remember { mutableStateOf("") }
     var showPw by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf(initialError) }
     val shake = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
