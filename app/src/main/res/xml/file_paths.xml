@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <!-- Matches ImageStore's attachments/<subfolder> layout under filesDir. -->
-    <files-path name="attachments" path="attachments/" />
-</paths>
