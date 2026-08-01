@@ -28,6 +28,7 @@ import androidx.fragment.app.FragmentActivity
 import com.vaultra.app.crypto.CryptoManager
 import com.vaultra.app.ui.theme.*
 import com.vaultra.app.util.BiometricHelper
+import kotlinx.coroutines.launch
 
 @Composable
 fun UnlockScreen(

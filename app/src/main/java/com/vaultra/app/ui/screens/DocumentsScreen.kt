@@ -422,7 +422,7 @@ private fun QuickActionChip(label: String, icon: androidx.compose.ui.graphics.ve
             .background(BgElev.copy(alpha = 0.85f))
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, contentDescription = label, tint = Accent2, modifier = Modifier.size(16.dp))
