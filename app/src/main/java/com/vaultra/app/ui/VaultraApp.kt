@@ -22,11 +22,25 @@ fun VaultraApp(activity: FragmentActivity) {
     }
     var sessionKey by remember { mutableStateOf<ByteArray?>(null) }
     var db by remember { mutableStateOf<VaultDatabase?>(null) }
+    var unlockError by remember { mutableStateOf<String?>(null) }
 
     fun onUnlocked(key: ByteArray) {
-        sessionKey = key
-        db = VaultDatabase.getInstance(activity, key)
-        phase = AppPhase.UNLOCKED
+        try {
+            val newDb = VaultDatabase.getInstance(activity, key)
+            newDb.openHelper.writableDatabase
+            sessionKey = key
+            db = newDb
+            phase = AppPhase.UNLOCKED
+            unlockError = null
+        } catch (e: Exception) {
+            VaultDatabase.close()
+            db = null
+            sessionKey = null
+            cryptoManager.clearBiometricKey()
+            cryptoManager.setBiometricEnabled(false)
+            unlockError = "Your saved biometric key was out of date and has been reset. Please unlock with your master password, then re-enable biometrics in Settings."
+            phase = AppPhase.UNLOCK
+        }
     }
 
     fun onLock() {
@@ -44,7 +58,8 @@ fun VaultraApp(activity: FragmentActivity) {
         AppPhase.UNLOCK -> UnlockScreen(
             activity = activity,
             cryptoManager = cryptoManager,
-            onUnlocked = { key -> onUnlocked(key) }
+            onUnlocked = { key -> onUnlocked(key) },
+            initialError = unlockError
         )
         AppPhase.UNLOCKED -> {
             val database = db
@@ -64,3 +79,4 @@ fun VaultraApp(activity: FragmentActivity) {
         }
     }
 }
+

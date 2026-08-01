@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -272,9 +273,25 @@ fun DocumentsScreen(db: VaultDatabase) {
 
         FloatingActionButton(
             onClick = { editTarget = null; showEditor = true },
-            containerColor = Accent, contentColor = Color.White, shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
-        ) { Icon(Icons.Filled.Add, contentDescription = "Add document") }
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(20.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Brush.linearGradient(listOf(Accent2, Accent)))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add document", tint = Color.White)
+                Spacer(Modifier.width(6.dp))
+                Text("Add Document", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            }
+        }
     }
 
     if (showFilterSheet) {
@@ -334,28 +351,49 @@ private fun DocumentsDashboard(docs: List<DocumentEntry>, categories: List<Docum
     val pdfCount = docs.sumOf { d -> d.attachmentPaths.count { !ImageStore.isImage(it) } }
     val totalBytes = remember(docs) { docs.sumOf { d -> d.attachmentPaths.sumOf { p -> File(p).let { if (it.exists()) it.length() else 0L } } } }
 
-    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = BgCard)) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Document Vault", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardStatDoc("Total", docs.size.toString(), TextPrimary)
-                DashboardStatDoc("Categories", categories.size.toString(), Accent2)
-                DashboardStatDoc("Favorites", favoriteCount.toString(), Warn)
-                DashboardStatDoc("Folders", folders.size.toString(), Good)
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardStatDoc("Images", imageCount.toString(), TextPrimary)
-                DashboardStatDoc("PDFs", pdfCount.toString(), TextPrimary)
-                DashboardStatDoc("Storage", formatBytes(totalBytes), TextPrimary)
-            }
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                QuickActionChip("Add", Icons.Filled.Add, Modifier.weight(1f)) { onQuickAction("add") }
-                QuickActionChip("Filter", Icons.Filled.FilterList, Modifier.weight(1f)) { onQuickAction("filter") }
-                QuickActionChip("Categories", Icons.Filled.Category, Modifier.weight(1f)) { onQuickAction("categories") }
-                QuickActionChip("Favorites", Icons.Filled.Star, Modifier.weight(1f)) { onQuickAction("favorites") }
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .background(Brush.linearGradient(listOf(DocGradStart, DocGradEnd, BgCard)))
+                .padding(18.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentDoc.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.Description, contentDescription = null, tint = AccentDoc, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Document Vault", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Black)
+                        Text("${docs.size} files stored securely", fontSize = 11.5.sp, color = TextDim)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    DashboardStatDoc("Total", docs.size.toString(), TextPrimary)
+                    DashboardStatDoc("Categories", categories.size.toString(), Accent2)
+                    DashboardStatDoc("Favorites", favoriteCount.toString(), Warn)
+                    DashboardStatDoc("Folders", folders.size.toString(), Good)
+                    DashboardStatDoc("Storage", formatBytes(totalBytes), AccentDoc)
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    QuickActionChip("Add", Icons.Filled.Add, Modifier.weight(1f)) { onQuickAction("add") }
+                    QuickActionChip("Filter", Icons.Filled.FilterList, Modifier.weight(1f)) { onQuickAction("filter") }
+                    QuickActionChip("Categories", Icons.Filled.Category, Modifier.weight(1f)) { onQuickAction("categories") }
+                    QuickActionChip("Favorites", Icons.Filled.Star, Modifier.weight(1f)) { onQuickAction("favorites") }
+                }
             }
         }
     }
@@ -369,21 +407,27 @@ private fun formatBytes(bytes: Long): String {
 
 @Composable
 private fun DashboardStatDoc(label: String, value: String, color: Color) {
-    Column {
-        Text(label, fontSize = 11.sp, color = TextDim)
-        Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = color)
+        Spacer(Modifier.height(2.dp))
+        Text(label, fontSize = 10.5.sp, color = TextDim, fontWeight = FontWeight.Medium)
     }
 }
 
 @Composable
 private fun QuickActionChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(
-        modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Bg).clickable(onClick = onClick).padding(vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(BgElev.copy(alpha = 0.85f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = label, tint = Accent2, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = TextDim, fontSize = 10.5.sp)
+        Icon(icon, contentDescription = label, tint = Accent2, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -391,11 +435,23 @@ private fun QuickActionChip(label: String, icon: androidx.compose.ui.graphics.ve
 private fun DocCategoryChip(label: String, selected: Boolean, category: DocumentCategory?, onClick: () -> Unit) {
     val color = category?.let { parseHexColor(it.colorHex) } ?: Accent2
     Row(
-        modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (selected) color.copy(alpha = 0.22f) else BgCard).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) color.copy(alpha = 0.25f) else BgCard)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (category != null) { Box(Modifier.size(8.dp).clip(CircleShape).background(color)); Spacer(Modifier.width(6.dp)) }
-        Text(label, color = if (selected) color else TextDim, fontSize = 12.5.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        if (category != null) {
+            Box(Modifier.size(9.dp).clip(CircleShape).background(color))
+            Spacer(Modifier.width(7.dp))
+        }
+        Text(
+            label,
+            color = if (selected) color else TextDim,
+            fontSize = 12.5.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
 
@@ -405,21 +461,36 @@ private fun DocumentListCard(
     doc: DocumentEntry, category: DocumentCategory?, selectMode: Boolean, selected: Boolean,
     onClick: () -> Unit, onLongClick: () -> Unit, onToggleFavorite: () -> Unit
 ) {
+    val categoryColor = category?.let { parseHexColor(it.colorHex) } ?: Accent2
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = if (selected) Accent.copy(alpha = 0.14f) else BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (selectMode) { Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, contentDescription = null, tint = if (selected) Accent else TextDim, modifier = Modifier.padding(end = 10.dp)) }
-            DocCategoryBadge(category, size = 32.dp)
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(categoryColor)
+            )
+            Spacer(Modifier.width(10.dp))
+            if (selectMode) {
+                Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, contentDescription = null, tint = if (selected) Accent else TextDim, modifier = Modifier.padding(end = 10.dp))
+            }
+            DocCategoryBadge(category, size = 34.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(doc.title.ifBlank { doc.docType }, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(doc.docType, fontSize = 11.sp, color = TextDim)
-                    if (doc.attachmentPaths.isNotEmpty()) Text("· ${doc.attachmentPaths.size} file${if (doc.attachmentPaths.size > 1) "s" else ""}", fontSize = 11.sp, color = TextDim)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(doc.docType, fontSize = 11.sp, color = TextDim, fontWeight = FontWeight.Medium)
+                    if (doc.attachmentPaths.isNotEmpty()) {
+                        Text("· ${doc.attachmentPaths.size} file${if (doc.attachmentPaths.size > 1) "s" else ""}", fontSize = 11.sp, color = AccentDoc)
+                    }
                 }
             }
             if (!selectMode) {
@@ -435,21 +506,35 @@ private fun DocumentListCard(
 @Composable
 private fun DocumentGridCard(doc: DocumentEntry, category: DocumentCategory?, selectMode: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     val firstImage = doc.attachmentPaths.firstOrNull { ImageStore.isImage(it) }
+    val categoryColor = category?.let { parseHexColor(it.colorHex) } ?: Accent2
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = if (selected) Accent.copy(alpha = 0.14f) else BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column {
-            Box(Modifier.fillMaxWidth().height(90.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(Bg), contentAlignment = Alignment.Center) {
-                if (firstImage != null) AsyncImage(model = File(firstImage), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                else DocCategoryBadge(category, size = 40.dp)
+            Box(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)).background(Bg), contentAlignment = Alignment.Center) {
+                if (firstImage != null) {
+                    AsyncImage(model = File(firstImage), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                } else {
+                    DocCategoryBadge(category, size = 44.dp)
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(categoryColor)
+                )
                 if (doc.isFavorite) Icon(Icons.Filled.Star, contentDescription = "Favorite", tint = Warn, modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(18.dp))
                 if (selectMode) Icon(if (selected) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, contentDescription = null, tint = if (selected) Accent else Color.White, modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
             }
-            Column(Modifier.padding(10.dp)) {
-                Text(doc.title.ifBlank { doc.docType }, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(doc.docType, color = TextDim, fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.padding(12.dp)) {
+                Text(doc.title.ifBlank { doc.docType }, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(2.dp))
+                Text(doc.docType, color = TextDim, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

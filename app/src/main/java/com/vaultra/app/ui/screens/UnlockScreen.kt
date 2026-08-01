@@ -28,18 +28,52 @@ import androidx.fragment.app.FragmentActivity
 import com.vaultra.app.crypto.CryptoManager
 import com.vaultra.app.ui.theme.*
 import com.vaultra.app.util.BiometricHelper
-import kotlinx.coroutines.launch
 
 @Composable
-fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnlocked: (ByteArray) -> Unit) {
+fun UnlockScreen(
+    activity: FragmentActivity,
+    cryptoManager: CryptoManager,
+    onUnlocked: (ByteArray) -> Unit,
+    initialError: String? = null
+) {
     var pw by remember { mutableStateOf("") }
     var showPw by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(initialError) }
     val shake = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
-    val biometricReady = remember {
-        cryptoManager.isBiometricEnabled() && cryptoManager.getKeyForBiometric() != null && BiometricHelper.isAvailable(activity)
+    val isBiometricConfigured = cryptoManager.isBiometricEnabled() && cryptoManager.getKeyForBiometric() != null
+    val isHardwareAvailable = remember(activity) { BiometricHelper.isAvailable(activity) }
+    val biometricReady = isBiometricConfigured && isHardwareAvailable
+
+    fun launchBiometricPrompt() {
+        BiometricHelper.prompt(
+            activity,
+            onSuccess = {
+                val key = cryptoManager.getKeyForBiometric()
+                if (key != null) {
+                    onUnlocked(key)
+                } else {
+                    error = "Biometric key unavailable — please use your password"
+                }
+            },
+            onError = { code, message ->
+                // Error codes 10 (user canceled) and 13 (tapped negative button) are quiet cancels.
+                if (code != 10 && code != 13) {
+                    error = "Biometric unlock failed: $message"
+                    scope.launch {
+                        shake.animateTo(14f, tween(60)); shake.animateTo(-14f, tween(60))
+                        shake.animateTo(8f, tween(60)); shake.animateTo(0f, tween(60))
+                    }
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(biometricReady) {
+        if (biometricReady && initialError == null) {
+            launchBiometricPrompt()
+        }
     }
 
     fun attemptUnlock() {
@@ -103,7 +137,7 @@ fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnl
         )
         if (error != null) {
             Spacer(Modifier.height(8.dp))
-            Text(error!!, color = Accent2, fontSize = 12.5.sp)
+            Text(error!!, color = Accent2, fontSize = 12.5.sp, textAlign = TextAlign.Center)
         }
         Spacer(Modifier.height(20.dp))
 
@@ -120,30 +154,7 @@ fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnl
 
         if (biometricReady) {
             Spacer(Modifier.height(14.dp))
-            TextButton(onClick = {
-                BiometricHelper.prompt(
-                    activity,
-                    onSuccess = {
-                        val key = cryptoManager.getKeyForBiometric()
-                        if (key != null) {
-                            onUnlocked(key)
-                        } else {
-                            error = "Biometric key unavailable — please use your password"
-                        }
-                    },
-                    onError = { code, message ->
-                        // Error codes 10 (user canceled) and 13 (tapped negative button) mean the
-                        // person deliberately backed out — no need to show a scary error for those.
-                        if (code != 10 && code != 13) {
-                            error = "Biometric unlock failed: $message"
-                            scope.launch {
-                                shake.animateTo(14f, tween(60)); shake.animateTo(-14f, tween(60))
-                                shake.animateTo(8f, tween(60)); shake.animateTo(0f, tween(60))
-                            }
-                        }
-                    }
-                )
-            }) {
+            TextButton(onClick = { launchBiometricPrompt() }) {
                 Icon(Icons.Filled.Fingerprint, contentDescription = null, tint = Accent2)
                 Spacer(Modifier.width(8.dp))
                 Text("Unlock with biometrics", color = Accent2, fontWeight = FontWeight.SemiBold)
@@ -151,3 +162,4 @@ fun UnlockScreen(activity: FragmentActivity, cryptoManager: CryptoManager, onUnl
         }
     }
 }
+

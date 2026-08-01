@@ -14,6 +14,11 @@ val Good = Color(0xFF2ECC71)
 val Warn = Color(0xFFF5A623)
 val SwitchOffTrack = Color(0xFF4A4A52)
 val SwitchOffBorder = Color(0xFF6E6E78)
+val BgCardHover = Color(0xFF24242A)
+val AccentDoc = Color(0xFF22C1C3)
+val DocGradStart = Color(0xFF1E2638)
+val DocGradEnd = Color(0xFF141924)
+
 
 val AvatarPalette = listOf(
     Color(0xFFE0223A), Color(0xFFE08B22), Color(0xFF22A8E0),
